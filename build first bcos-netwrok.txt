@@ -1,0 +1,66 @@
+1.安装docker 见(docker install)
+
+2.下载bcos源码https://github.com/bcosorg/bcos/tree/master
+
+3.解压之后进入 bcos/scripts/
+#生成bcos必要的配置文件(从dockerhub 拉取镜像bcosorg/bcos:latest 竟然有949M这么大,也是惊了个呆 PS:之前自己打包的ethereum仅仅149M)
+[blockchain@localhost scripts]$ ./scripts/genConfig.sh
+# 产生配置文件位于文件夹node-0
+
+# 启动容器 如果熟悉docker的朋友可以直接使用命令来启动容器
+$ ./scripts/start_bcos_docker.sh $PWD/node-0
+
+直接通过docker 命令启动容器,可以进入容器查看bcos的配置
+docker run -d --rm --name bcos-test  bcosorg/bcos:latest
+启动后会显示container id
+docker exec -it <containerID> bash 进入容器，配置文件在/nodedata下
+
+查看一下start_bcos_docker.sh 这个脚本的内容,不难发现,这个脚本的作用就是根据bcosorg/bcos:latest 这个镜像来生成一个容器,而这个容器就是一个bcos的节点了。
+#!/bin/bash
+
+# example: ./start_docker.sh /nodedata/node-1 node1
+set -e
+
+configPath="~/nodedata"
+dockerImage="bcosorg/bcos:latest"
+containerName="bcos"
+containerDataPath="/nodedata"
+
+if [ $# = 1 ];then
+    configPath=$1
+    containerName=$containerName"-"${configPath##*/}
+elif [ $# = 2 ];then
+    configPath=$1
+    containerName=$2
+else
+    echo "Please input path of config.json"
+    echo "Usage: $0 [full/path/to/config.json & genesis.json] [container name]"
+    exit -1
+if [ ! -f $configPath/genesis.json ];then
+    echo "$configPath/genesis.json doesn't exists."
+    exit -1
+fi
+
+if [ ! -f $configPath/config.json ];then
+    echo "$configPath/config.json doesn't exists."
+    exit -1
+fi
+
+rpcport=`cat $configPath/config.json | grep -i "rpcport" | awk -F ':' '{print $2}' | sed 's/\([^0-9]\)//g'`
+p2pport=`cat $configPath/config.json | grep -i "p2pport" | awk -F ':' '{print $2}' | sed 's/\([^0-9]\)//g'`
+
+echo "--------------------------------------"
+echo "configPath:    $configPath"
+echo "rpcport:       $rpcport"
+echo "p2pport:       $p2pport"
+echo "dockerImage:   $dockerImage"
+echo "containerName: $containerName"
+echo "--------------------------------------"
+
+docker run -d --rm --name $containerName -v $configPath:$containerDataPath  -p $rpcport:$rpcport -p $p2pport:$p2pport $dockerImage
+
+以上为该脚本内容
+
+需要关注的主要内容就是 -v 挂载出来的配置文件  -p 暴露的端口  都可以在容器内/nodedata/config.json 下看到具体配置
+
+bcos节点容器的主要配置都在容器中的 /nodedata 目录下,其中 genesis.json 是以太坊的创世文件 其中的属性difficulty是用来设置挖矿难度的,gasLimit设置的是单笔交易允许消耗的gas最大值
