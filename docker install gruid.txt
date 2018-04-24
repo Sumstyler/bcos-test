@@ -19,5 +19,10 @@ yum 安装docker
 	sudo systemctl enable docker
 9、验证安装是否成功(有client和service两部分表示docker安装启动都成功了)
 	docker version
+10、设置国内docker镜像源
+	我这里设置的是daocloud(curl -sSL https://get.daocloud.io/daotools/set_mirror.sh|sh -s http://d4cc5789.m.daocloud.io) 这个可以自己到daocloud申请
+	设置成功后根据提示，重启docker
+	sudo systemctl restart docker
+	
 	
 	如果是因为之前安装过导致的错误,yum卸载之前的包
